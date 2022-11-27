@@ -2,6 +2,7 @@ import copy
 import math
 import random
 import scipy.signal
+from displayMUAPT import plot_1d_spikes
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -49,9 +50,11 @@ def delta_function(x, eps):
     return result
 def delta_function2(x, eps):
     result = np.zeros_like(x)
+    pos = random.randint(0, len(x))
+    # print(pos)
     for index, xi in enumerate(x):
-        # pos = eps / 2
-        if -eps / 2 < xi < eps / 2:
+        #  / 2
+        if index == pos:
             result[index] = 1.0 #/ eps
         else:
             result[index] = 0
@@ -65,35 +68,22 @@ def genera_delta_train():
     for i in n_val:
         eps_ = eps_ / i
     delta = delta_function2(x_ - a, eps_)
-    plt.plot(x_, delta)
-    plt.show()
+    # plt.plot(x_, delta)
+    # plt.show()
     return delta
 
-# def fire_train():
-#     x1, x2 = -0.1 + 20000, 0.1 + 20000
-#     train_ = np.linspace(x1, x2, 20000)
-#     # for n in range(20000):
-#     #     for k in range(1,201):
-#     #         si_k = np.random.uniform(-10, 10, size=None)
-#     delta_function(train_, n - 100 * k + si_k)
-#     return train_
+def genera_train(num:int):
+    num = int(num / 100)
+    result = []
+    for i in range(num):
+        result.extend(genera_delta_train())
+    return result
 
-
-def MUAPT():
-    t = np.linspace(0,10,2000)
-    print(np.array(t).shape)
-    for k in range(200):
-        pass
 if __name__ == '__main__':
-    # MUAPT()
-    # data = SFAP()
-    # x = np.linspace(0, 3, 20000)
-    # train = fire_train()
-    # # print(train)
-    # plt.plot(train)
-    # plt.show()
-    data = genera_delta_train()
-    print(np.array(data).shape)
+    data = genera_train(20000)
+    t = np.linspace(0,20000,20000)
+    plot_1d_spikes(np.array([data]).T, "SEMG_simulation", "lenght", "height")
+    plt.show()
 
 
 
