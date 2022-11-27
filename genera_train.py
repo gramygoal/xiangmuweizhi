@@ -42,6 +42,11 @@ def genera_delta_train():
 
 
 def genera_train(num: int):
+    """
+
+    :param num: 要生成的脉冲序列由多少个脉冲构成
+    :return:
+    """
     num = int(num / 100)
     result = []
     for i in range(num):

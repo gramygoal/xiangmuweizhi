@@ -21,7 +21,7 @@ def Gaussian(x, u, d):
     return p
 
 
-def SFAP(fu, fv, fc):
+def SFAP(fu, fv, fc, sizeofmu):
     """
     :param fu: 表示幅值， 需要由三个包含正负的数组成 例：fu = [-2, 2, 1]
     :param fv: 表示带宽，例：fv = [0.2, 0.3, 0.4]
@@ -29,16 +29,18 @@ def SFAP(fu, fv, fc):
     :return: 生成的混合肌肉纤维动作电位sfap信号
     """
     signal = 0
-    x = np.linspace(0, 3, 200)
+    x = np.linspace(0, 3, sizeofmu)
     for i in range(3):
         signal += fu[i] * Gaussian(x, fc[i], fv[i])
     return signal
 
 
-def generate_mu(num):
+def generate_mu(num, sizeofmu):
     """
-    :param num:输入要生成多少个MU波形信号
-    :return: 返回生成的MU信号
+
+    :param num:
+    :param sizeofmu: 输入每个MU波形由多少数据点构成
+    :return:
     """
     fu, fv, fc = [0] * 3, [0] * 3, [0] * 3
     mu_signal = []
@@ -47,7 +49,7 @@ def generate_mu(num):
             fu[i] = random.randint(-2, 2)
             fv[i] = random.random()
             fc[i] = random.uniform(1, 2)
-    mu_signal.append(SFAP(fu, fv, fc))
+    mu_signal.append(SFAP(fu, fv, fc, sizeofmu))
     plt.plot(mu_signal[0])
     plt.show()
     return mu_signal

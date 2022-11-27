@@ -5,8 +5,13 @@ from genera_train import genera_train
 
 
 def generate_semg(sfap, mu_train_data):
+    """
+    通过把纤维动作电位信号与脉冲序列卷积生成肌电信号
+    :param sfap:
+    :param mu_train_data:
+    :return: 返回由输入的两个信号卷积生成的信号
+    """
     new = scipy.signal.convolve(sfap, mu_train_data)
-    # semg_simulation = np.convolve(sfap, mu_train_data)#semg_simulation
     return new
 
 
@@ -16,7 +21,7 @@ def everymu_gen_emg(lenght: int):
     :return: 返回信号的长度是 lenght * (200 + 200 -1)
     """
     semg = []
-    sfap = generate_mu(1)
+    sfap = generate_mu(1, 200)
     for musfap in sfap:
         for i in range(lenght):
             mu_train_data = genera_train(200)
