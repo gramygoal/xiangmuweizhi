@@ -1,6 +1,7 @@
-import numpy as np
 import random
+import numpy as np
 from displayMUAPT import plot_1d_spikes
+
 
 # Defining delta function by rectangles候选delta脉冲函数
 def delta_function(x, eps):
