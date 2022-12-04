@@ -1,6 +1,8 @@
 import random
 import numpy as np
 from displayMUAPT import plot_1d_spikes
+import math
+from matplotlib import pyplot as plt
 
 
 # Defining delta function by rectangles候选delta脉冲函数
@@ -44,7 +46,6 @@ def genera_delta_train():
 
 def genera_train(num: int):
     """
-
     :param num: 要生成的脉冲序列由多少个脉冲构成
     :return:
     """

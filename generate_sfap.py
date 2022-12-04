@@ -1,6 +1,7 @@
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import csv
 
 
 def Gaussian(x, u, d):
@@ -48,7 +49,38 @@ def generate_mu(num, sizeofmu):
             fu[i] = random.randint(-2, 2)
             fv[i] = random.random()
             fc[i] = random.uniform(1, 2)
-    mu_signal.append(SFAP(fu, fv, fc, sizeofmu))
+        mu_signal.append(SFAP(fu, fv, fc, sizeofmu))
     plt.plot(mu_signal[0])
     plt.show()
     return mu_signal
+
+
+def save_musfap(data):
+    for index, i in enumerate(data):
+        with open("D:\semg_simulation_result\MU_sfap{}.csv".format(index), "w") as f:
+            writer = csv.writer(f)
+            writer.writerow(i)
+
+
+def read_sfap_data_from_csv(num):
+    """
+    从预存的CSV文件中读取MU波形数据
+    :return:
+    """
+    for i in range(num):
+        all_data = []
+        index = i + 1
+        with open("/gpfs/home/xieyongbao/biye/MU_sfap{}.csv".format(index), "r") as f:
+            read_csv = csv.reader(f)
+            for line in read_csv:  # 循环输出csv中的所有数据
+                data = list(map(float, line))
+            all_data.append(data)
+                # plt.plot(data)
+                # plt.show()
+    return all_data
+
+if __name__ == '__main__':
+    mu_signal = generate_mu(5, 1000)
+    plt.plot(mu_signal[0])
+    plt.show()
+    # save_musfap(mu_signal)
