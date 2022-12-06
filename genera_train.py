@@ -17,7 +17,7 @@ def delta_function(x, eps):
     return result
 
 
-def delta_function2(x, eps):
+def delta_function2(x):
     result = np.zeros_like(x)
     pos = random.randint(0, len(x))
     # print(pos)
@@ -38,7 +38,7 @@ def genera_delta_train():
     n_val = np.arange(1, 5)
     for i in n_val:
         eps_ = eps_ / i
-    delta = delta_function2(x_ - a, eps_)
+    delta = delta_function2(x_ - a)
     # plt.plot(x_, delta)
     # plt.show()
     return delta

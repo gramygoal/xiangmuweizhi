@@ -1,4 +1,6 @@
 import random
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 # from displayMUAPT import plot_1d_spikes
@@ -27,7 +29,7 @@ def train_with_isi(MUAP, isimode):
     :return:
     """
     # shapeofmuap = [15, 200]
-    M, L = np.array(MUAP).shape
+    M, L = MUAP.shape
     T = 100
     # M, L = shapeofmuap[0], shapeofmuap[1]
     dt = 16 / L * 10 ** (-1)
@@ -55,6 +57,7 @@ def train_with_isi(MUAP, isimode):
         spikes = np.zeros(N)
         reps = math.ceil((N * M) / float(2 ** 31))  #
         N_p = int(16000/1)  #
+        tmp = []
         # ISI distributed according to a Gaussian
         # 根据高斯分布的ISI
         if isimode == 'gauss':
@@ -65,28 +68,16 @@ def train_with_isi(MUAP, isimode):
             st = np.full((M, N_p), False, dtype=bool)
             if isimode == 'gauss':
                 if reps == 1:
-                    tmp = []
                     eng = matlab.engine.start_matlab()
-                    gauss_st = matlab.double(gauss_st)
                     eng.workspace["M"] = M
                     tmp = eng.histc(gauss_st,time[N_p * (r - 1):N_p * r] * dt)
                     eng.workspace["tmp"] = tmp
                     eng.eval('tmp(end,:) = zeros(1,M);', nargout=0)
-                    tmp = eng.workspace["tmp"]
-                    eng.eval('st = tmp\' > 0;', nargout=0)
-                    st = eng.workspace["st"]
-                    eng.quit()
-                    # for i in range(np.array(gauss_st).shape[1]):
-                    #     hist, bins = np.histogram(gauss_st[:][i], bins = time[N_p * (r - 1):N_p * r] * dt)
-                    #     tmp.append(hist)
-                    # print('tmpshape',np.array(tmp[:][-1]).shape)
-                    # tmp[:][-1] = np.zeros([1, M])
                 elif r == 1:
-                    tmp = []
-                    for i in range(np.array(gauss_st).shape[1]):
-                        hist, bins = np.histogram(gauss_st, time[N_p * (r - 1):N_p * r] * dt)
-                        tmp.append(hist)
-                    tmp[-1, :] = []
+                    tmp = eng.histc(gauss_st, time[N_p * (r - 1):N_p * r + 1] * dt)
+                    eng.workspace["tmp"] = tmp
+                    eng.eval('tmp(end,:) = [];', nargout=0)
+                    tmp = eng.workspace["tmp"]
                 elif r == reps and reps * N_p == N:
                     tmp = []
                     for i in range(np.array(gauss_st).shape[1]):
@@ -100,27 +91,36 @@ def train_with_isi(MUAP, isimode):
                         hist, bins = np.histogram(gauss_st, time[N_p * (r - 1):N_p * r] * dt)
                         tmp.append(hist)
                     tmp[1:-1] = []
-                # st = tmp > 0  #.T
-                # print('tmp',np.array(tmp[0]).shape)
-                # tmp = np.array(tmp)
-                # st = [(i > 0) + 0 for i in tmp.T]
-                stt = []
-                for i in st:
-                    stt.append(list(map(int, i)))
-                st = stt
+                eng.eval('st = tmp\' > 0;', nargout=0)
+                # st = eng.workspace["st"]
+                # stt = []
+                # for i in st:
+                #     stt.append(list(map(int, i)))
+                # st = stt
             elif isimode == 'exponential':
                 st = makeSpikeTrain(MUs, time[N_p * (r - 1) + 1:N_p * r], recthresh, neuraldrive, g, lambdamin,
                                     lambdamax, dt)
             elif isimode == 'weibull':
                 pass
         # print('stshape',np.array(st).shape)
-        st = np.array(st)
-        for t in range(N_p * (r - 1) , N_p * r):
-            # print('aaaa',np.array(st[:,t - N_p * (r - 1)]).shape)
-            sEMG[t: t + L] = sEMG[t: t + L] + sum(MUAP[st[:,t - N_p * (r - 1)],:], 1)
-            force[t: t + L] = force[t: t + L] + sum(twitch[st[:,t - N_p * (r - 1)], :], 1)
-            spikes[t] = sum(st[:,t - N_p * (r - 1)])
-
+        # st = np.array(st)
+        # MUAP = np.array(MUAP)
+        MUAP = MUAP.tolist()
+        MUAP = matlab.double(MUAP)
+        eng.workspace["MUAP"] = MUAP
+        eng.workspace["sEMG"] = sEMG
+        eng.workspace["L"] = L
+        eng.workspace["r"] = r
+        eng.workspace["N_p"] = N_p
+        for t in range(N_p * (r - 1)+1 , N_p * r + 1):
+            # print(t)
+            eng.workspace["t"] = t
+            eng.eval('MUAP(st(:,t-N_p*(r-1)),:);', nargout=0)
+            eng.eval('sEMG(1,t:t+L-1) = sEMG(1,t:t+L-1) + sum(MUAP(st(:,t-N_p*(r-1)),:), 1);', nargout=0)
+            spikes[t-1] = sum(st[:, t - 1 - N_p * (r - 1)])
+        sEMG = eng.workspace["sEMG"]
+        sEMG = sEMG[0].toarray()
+        eng.quit()
         rest = N - reps * N_p
         print('%d, %d, %d\n', rest, reps * N_p, N)
         if rest > 0:
@@ -138,14 +138,20 @@ def train_with_isi(MUAP, isimode):
                     sEMG[1, t: t + L - 1] = sEMG[1, t: t + L - 1] + sum(MUAP[st[:, t - N_p * reps],:], 1)
                     # force(1, t: t + L - 1) = force(1, t: t + L - 1) + sum(twitch(st(:, t - N_p * reps),:), 1);
                     spikes[t] = sum(st[:, t - N_p * (r - 1)])
-    return spikes
-            # % spiketimes = gather(gauss_st);
-            # time = gather(time);
+    return spikes, sEMG
+
 if __name__ == '__main__':
     data_path = 'D:/biyexiangguansuanfa/EMGsim-master/EMGsim-master/Codes/MUAPs_Francesco.mat'
     MUAP = scio.loadmat(data_path)
     muapdata = MUAP['MUAPs']
     # print(np.array(muapdata[0:100][:]).shape)
-    spikes = train_with_isi(muapdata[0:100][:], 'gauss')
+    real_MUAP = muapdata[0:100,:]
+    # real_MUAP = np.array(real_MUAP,dtype=float)
+    spikes, sEMG = train_with_isi(real_MUAP, 'gauss')
+    print(type(sEMG))
+    plt.plot(sEMG)
+    plt.show()
     spikes_path = 'D:/biyexiangguansuanfa/EMGsim-master/EMGsim-master/Codes/spikes.mat'
+    sEMG_path = 'D:/biyexiangguansuanfa/EMGsim-master/EMGsim-master/Codes/sEMG.mat'
     scio.savemat(spikes_path, {'spikes': spikes})
+    scio.savemat(sEMG_path, {'sEMG': sEMG})
