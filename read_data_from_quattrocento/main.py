@@ -5,14 +5,17 @@
 
 
 import socket
-from matplotlib import pyplot as plt
+
 import numpy as np
+from matplotlib import pyplot as plt
+
+
 def ReadFromOTBiolabLightQuattrocento(filename):
-    nCh = 384 + 16 + 8; # set the number of channels required
-    channelToPlot = 384 + 16 + 1;# set the channel to plot(ramp)
-    fSample = 2048; # set sampling frequency
-    fRead = 16; # set reading frequency
-    nCycles = 30 * fRead; # set number of read
+    nCh = 384 + 16 + 8;  # set the number of channels required
+    channelToPlot = 384 + 16 + 1;  # set the channel to plot(ramp)
+    fSample = 2048;  # set sampling frequency
+    fRead = 16;  # set reading frequency
+    nCycles = 30 * fRead;  # set number of read
     timeSize = 2;
     # plt.plot()
     tRead = np.zeros(1, nCycles)
@@ -73,4 +76,3 @@ def xianshihanshu():
 if __name__ == '__main__':
     xianshihanshu()
 
-# 访问 https://www.jetbrains.com/help/pycharm/ 获取 PyCharm 帮助
