@@ -1,6 +1,9 @@
 import os
 import re
 
+import torch
+from torch.utils.data import TensorDataset
+
 from extra_features.feature_utils import *
 
 
@@ -100,20 +103,23 @@ def windwos_data(data, label):
     return featureData, featureLabel
 
 
-def load_all_data():
+def load_all_data(path, task_type, sig_type):
     subject = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17',
                '18', '19', '20']
     session = [1, 2]
-    path = 'D:/physionet.org/files/hd-semg/1.0.0/'
+    #     path = '/gpfs/home/xieyongbao/physionet.org/files/hd-semg/1.0.0/'
     all_data = []
     all_label = []
     for sub in subject:
         for se in session:
-            data, label = load_PR_data(path, sub, session, 'dynamic', 'preprocess')
+            data, label = load_PR_data(path, sub, se, task_type, sig_type)
             featureData, featureLabel = windwos_data(data, label)
             all_data.extend(featureData)
             all_label.extend(featureLabel)
-    return all_data, all_label
+    label_data = torch.tensor(all_label)
+    finally_data = torch.tensor(all_data)
+    train_ids = TensorDataset(finally_data, label_data)
+    return train_ids
 
 
 if __name__ == '__main__':
