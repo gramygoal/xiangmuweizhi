@@ -5,7 +5,7 @@ from math import pi
 
 import numpy as np
 import pywt
-from nitime import algorithms as alg
+# from nitime import algorithms as alg
 from numpy import linalg as LA
 from sampen import sampen2
 from scipy import linalg
@@ -359,14 +359,14 @@ def emg_mtw_energy(signal, first_percent=0.2, second_percent=0.7):
     return mtwe
 
 
-def emg_arc(signal, order=4):
-    if order >= len(signal):
-        rd = len(signal) - 1
-    else:
-        rd = order
-    arc, ars = alg.AR_est_YW(signal, rd)
-    arc = np.array(arc)
-    return arc
+# def emg_arc(signal, order=4):
+#     if order >= len(signal):
+#         rd = len(signal) - 1
+#     else:
+#         rd = order
+#     arc, ars = alg.AR_est_YW(signal, rd)
+#     arc = np.array(arc)
+#     return arc
 
 
 def emg_cc(signal, order=4):

@@ -1,7 +1,7 @@
 import os
 import re
 
-import numpy as np
+from extra_features.feature_utils import *
 
 
 def re_find_in_dir(path: str = '', pattern: str = ''):
@@ -21,8 +21,17 @@ def re_find_in_dir(path: str = '', pattern: str = ''):
     return match_file
 
 
+def load_label(path, task_type):
+    label = []
+    with open(path + '/label_' + task_type + '.txt') as f:
+        for line in f:
+            label.append(list(map(int, line.strip().split(','))))
+    return label[0]
+
+
 def load_PR_data(path, subject, session, task_type, sig_type):
     filename_path = 'pr_dataset/subject' + subject + '_session{}'.format(session)
+    label = load_label(path + filename_path, task_type)
     data_name = task_type + '_' + sig_type
     file_name = re_find_in_dir(path + filename_path, data_name)
     data_real = [([0.0]) for i in range(len(file_name))]
@@ -31,34 +40,26 @@ def load_PR_data(path, subject, session, task_type, sig_type):
             session) + task_type + '_' + sig_type + '_sample{}.dat'.format(i + 1)
         data = np.fromfile(data_name, dtype='i2')
         data_tmp = data.reshape(2048, 256)
-        # data_tmp = np.array(data_tmp, dtype=float)
+        data_tmp = np.array(data_tmp, dtype=float)
         info_name = path + 'pr_dataset/subject' + subject + '_session{}/'.format(
             session) + task_type + '_' + sig_type + '_sample{}.hea'.format(i + 1)
         fp = open(info_name, "r")
-        info_data1 = []
+        info_data = []
         for line in fp.readlines():
-            '''
-            当你读取文件数据时会经常遇见一种问题，
-            那就是每行数据末尾都会多个换行符‘\n’，
-            所以我们需要先把它们去掉
-            '''
+            # 当你读取文件数据时会经常遇见一种问题，
+            # 那就是每行数据末尾都会多个换行符‘\n’，
+            # 所以我们需要先把它们去掉
             line = line.replace('\n', '')
             # 或者line=line.strip('\n')
             # 但是这种只能去掉两头的，可以根据情况选择使用哪一种
             line = line.split()
             # 以逗号为分隔符把数据转化为列表
-            info_data1.append(line)
+            info_data.extend(line)
         fp.close()
-        info_data = []
-        for k in info_data1:
-            info_data.extend(k)
-        c = task_type + sig_type + '_sample' + str(i + 1) + '.dat'
-        idx = []
-        a = 0
-        for l in info_data:
-            if l == c:
-                idx.append(a)
-            a += 1
+
+        c = task_type + '_' + sig_type + '_sample' + str(i + 1) + '.dat'
+        idx = [i for i, v in enumerate(info_data) if v == c]
+
         for u in range(len(idx)):
             str_tmp = info_data[idx[u] + 2]
             gain_baseline = info_data[idx[u] + 2]
@@ -67,32 +68,60 @@ def load_PR_data(path, subject, session, task_type, sig_type):
             baseline = int(gain_baseline[int(x + 1):int(y)])
             gain = float(gain_baseline[:int(x)])
             data_tmp[:, u] = (data_tmp[:, u] - baseline) / gain
-        data_real[i] = data_tmp
-    return data_real
+        array2 = data_tmp[:, 64:128]
+        array4 = data_tmp[:, 192:256]
+        array_conb = np.hstack((array2, array4))
+        data_real[i] = array_conb
+    return data_real, label
 
 
-def load_label(path):
-    label = []
-    with open(path + 'label_dynamic.txt') as f:
-        for line in f:
-            label.append(list(map(int, line.strip().split(','))))
-    return label[0]
-
-
-def windwos_data(data):
+def windwos_data(data, label):
     sig_start = 0.25  # remove the first 0.25s startup duration.
     step_len = 0.125
     window_len = 0.25
     fs_emg = 2048
+    start_pos = int(sig_start * fs_emg)
+    step = int(step_len * fs_emg)
+    featureData = []
+    featureLabel = []
     for j in range(len(data)):
-        for t in range(sig_start * fs_emg, len(data[j]) - window_len * fs_emg, step_len * fs_emg):
-            sig = data[j]
-            pass
+        stop = int(len(data[j]) - window_len * fs_emg)
+        for t in range(start_pos, stop, step):
+            pre_data = data[j]
+            sig = pre_data[t: t + int(np.floor(window_len * fs_emg)), :]
+            rms = featureRMS(sig)
+            mav = featureMAV(sig)
+            wl = featureWL(sig)
+            zc = featureZC(sig)
+            ssc = featureSSC(sig)
+            featureStack = np.hstack((rms, mav, wl, zc, ssc))
+            featureData.append(featureStack)
+            featureLabel.append(label[j])
+    return featureData, featureLabel
+
+
+def load_all_data():
+    subject = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17',
+               '18', '19', '20']
+    session = [1, 2]
+    path = 'D:/physionet.org/files/hd-semg/1.0.0/'
+    all_data = []
+    all_label = []
+    for sub in subject:
+        for se in session:
+            data, label = load_PR_data(path, sub, session, 'dynamic', 'preprocess')
+            featureData, featureLabel = windwos_data(data, label)
+            all_data.extend(featureData)
+            all_label.extend(featureLabel)
+    return all_data, all_label
 
 
 if __name__ == '__main__':
     path = 'D:/physionet.org/files/hd-semg/1.0.0/'
     data_path = 'D:/physionet.org/files/hd-semg/1.0.0/pr_dataset/'
-    data = load_PR_data(path, '01', 1, 'dynamic', 'preprocess')
-    label = load_label(path)
+    data, label = load_PR_data(path, '01', 1, 'dynamic', 'preprocess')
+    aa = data[0]
+    featureData, featureLabel = windwos_data(data, label)
+    print(np.array(featureData).shape)
+    print(np.array(featureLabel).shape)
     print(label)
